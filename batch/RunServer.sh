@@ -1,2 +1,2 @@
-#/bin/sh
-./bin/Server -log=server.log &
+#/usr/bin/sh
+./build/Server -log=server.log &
