@@ -40,9 +40,8 @@ struct RpcBody
 ```
 
 - `magic` is used by the server to quickly filter out data packets that don't belong to this RPC protocol.
-- The request and response of a single call share the same `seqno`, which helps the client distribute return values to different RPC protocols.
 - `need_return` indicates whether the server should return a function’s result.
-- `seqno` represents the position of this RPC is at in sequence.
+- `seqno` represents the position of this RPC is at in sequence. The request and response of a single call share the same `seqno`, which helps the client distribute return values to different RPC protocols.
 - `body_length` the actual length in bytes of the body part.
 - `servicename` is the name of the service used by the server to identify the request type and dispatch it to the corresponding routine.
 - `parameters` contains the function parameters.
