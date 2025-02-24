@@ -5,7 +5,7 @@
 
 RpcResult NameGetterImpl::Handle(const RpcMessage& Context)
 {
-    SERVER_EXEC_RPC_Proto(NameGetterImpl::GetName, GetNameArgs);
+    SERVER_EXEC_RPC(NameGetterImpl::GetName, GetNameArgs);
 }
 
 std::string NameGetterImpl::GetName(GetNameArgs args)
@@ -17,7 +17,7 @@ std::string NameGetterImpl::GetName(GetNameArgs args)
 
 RpcResult NameSetterImpl::Handle(const RpcMessage& Context)
 {
-    SERVER_EXEC_RPC_Proto(NameSetterImpl::SetName, SetNameArgs);
+    SERVER_EXEC_RPC(NameSetterImpl::SetName, SetNameArgs);
 }
 
 int NameSetterImpl::SetName(SetNameArgs args)

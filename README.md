@@ -1,5 +1,56 @@
 # DearmboatRPC
 
+## Overview
+
+DreamboatRPC framework is designed to provide a high-performance, scalable solution for distributed systems.
+
+It integrates Protobuf for efficient data serialization, adopts a reactor thread model, which efficiently handles multiple concurrent connections using minimal threads, ensuring optimal resource utilization and supporting high concurrency with non-blocking I/O. 
+
+Additionally, it incorporates an external name service, enabling dynamic service discovery and load balancing for distributed environments.
+
+### Architecture
+
+![arch](./imgs/RPCFlow.drawio.png)
+
+### Packet Layout
+
+![packet_layout](./imgs/RPCPacketLayout.drawio.png)
+
+```cpp
+struct RpcHeader
+{
+    unsigned short magic;
+    unsigned short version;
+    bool need_return;
+    int seqno;
+    int body_length;
+    char servicename[MAX_RPC_NAME_SIZE];
+};
+
+struct RpcResultHeader
+{
+    int seqno;
+    int body_length;
+};
+```
+
+- `magic` is used by the server to quickly filter out data packets that don't belong to this RPC protocol.
+- `servicename` is the name of the service used by the server to identify the request type and dispatch it to the corresponding routine.
+- The request and response of a single call share the same `seqno`, which helps the client distribute return values to different RPC protocols.
+- `need_return` indicates whether the server should return a function’s result.
+- `parameters` contains the function parameters.
+- `type` is used by the client to distinguish the return value type, and `return_buffer` contains the function's return value.
+
+```cpp
+struct RpcBody
+{
+    char parameters[MAX_RPC_PARAMS_SIZE];
+};
+```
+
+The Serialization layer will fill the `parameters` buffer of RpcBody.
+
+
 ## Prerequisites
 
 This framework can only be run on Linux.
@@ -44,90 +95,117 @@ FYI, you can find the entries of these two program in source/example/Server.cc a
 
 ## Usage
 
-This section demonstrates how to call a simple server's "hello world" function to introduce the framework's usage.
+This section demonstrates how to implement a hello service to introduce the framework's usage.
 
-To perform remote calls, you need an Rpc proxy class on the client side to invoke the RPC call, and you need a specific implementation on the server side to execute the task and return the function result.
+To perform remote calls, you need an Rpc proxy class on the client side to invoke the RPC call, and you need a specific implementation on the server side to execute the task and return the function result as well.
+
+### Writing the .proto
+
+The first thing you need to do is to define the arguments of your service, in Dreamboat, we outsource this definition to `protobuf`.
+
+For our hello service, the only argument we need is a `string`, which is the username of client.
+
+```proto
+message HelloArgs {
+  string username = 1;
+}
+```
+
+By execute `cmake ..` command, `protoc` is automatically called before compile, which will generate reflection code according to this proto file.
+
+In reflection code, you can see a c++ struct named `HelloArgs` produced by protoc, located in `*.pb.h`.
+
+```cpp
+class HelloArgs : public ::google::protobuf::Message
+{
+    <collapsed>
+private:
+  ::google::protobuf::internal::ArenaStringPtr username_;
+}
+```
 
 ### Writing the Service Base Class
 
 Inherit `RpcServiceBase`, set the `ServiceName` to uniquely identify the RPC service, and add a function declaration for the RPC function with its parameters and return values.
 
 ```cpp
-class EchoServiceBase : public RpcServiceBase
+class HelloServiceBase : public RpcServiceBase
 {
 public:
-    EchoServiceBase()
+    HelloServiceBase()
     {
-        ServiceName = "Echo";
+        ServiceName = "Hello";
     }
-    virtual ~EchoServiceBase() = default;
-    virtual std::string Echo(std::string) = 0;
+    virtual ~HelloServiceBase() = default;
+    virtual int Hello(HelloArgs args) = 0;
 };
 ```
 
 ### Writing the Service Implementation
 
-Inherit the `EchoServiceBase` class and implement the specific RPC function on the server. One limitation is that you need to implement the `Handle` function, which is the unified entry point for RPC processing.
+Inherit the `HelloServiceBase` class and implement the specific RPC function on the server. One limitation is that you need to implement the `Handle` function, which is the unified entry point for RPC processing.
 
 Then, in the server's `main`, start the server and register the service. The server will now be able to respond to incoming RPC requests.
 
 ```cpp
-class EchoServiceImpl : public EchoServiceBase
+class HelloServiceImpl : public HelloServiceBase
 {
 public:
-    EchoServiceImpl() = default;
-    virtual ~EchoServiceImpl() = default;
+    HelloServiceImpl() = default;
+    virtual ~HelloServiceImpl() = default;
     virtual RpcResult Handle(const RpcMessage& Context) override;
-    virtual std::string Echo(std::string data) override;
+    virtual int Hello(HelloArgs args) override;
 };
 
-RpcResult EchoServiceImpl::Handle(const RpcMessage& Context)
+RpcResult HelloServiceImpl::Handle(const RpcMessage& Context)
 {
-    SERVER_EXEC_RPC_OneParam(Echo, string);
+    SERVER_EXEC_RPC(Hello, HelloArgs);
 }
 
-std::string EchoServiceImpl::Echo(std::string data)
+int HelloServiceImpl::Hello(HelloArgs args)
 {
-    std::string echo_data = "Server says: " + data;
-    std::cout << echo_data << std::endl;
-    return echo_data;
+    std::string log_msg = "Hello, " + args.username();
+    std::cout << log_msg << std::endl;
+    return 0;
 }
 
 int main(int argc, char* argv[])
 {
     RpcServer ServerStub({"127.0.0.1", 8888, "server.log"}); // Get an RPC Server object
-    EchoServiceImpl EchoImplementation; // Construct an Echo service implementation
-    ServerStub.RegisterService(&EchoImplementation); // Register Echo service
+    HelloServiceImpl HelloImplementation; // Construct an Hello service implementation
+    ServerStub.RegisterService(&HelloImplementation); // Register Hello service
     ServerStub.Main(argc, argv); // Run the RPC Server, waiting for and handling requests
 }
 ```
 
 ### Implementing a One-Way Call
 
-Inherit `EchoServiceBase` and implement the RPC proxy on the client side. You only need to add a macro inside the client-side proxy function.
+Inherit `HelloServiceBase` and implement the RPC proxy on the client side. You only need to add a macro inside the client-side proxy function.
 
-Start the RPC client, call the client method to get the service proxy object, and then you will see the server print "Server says: hello world!".
+Start the RPC client, call the client method to get the service proxy object, and then you will see the server print "Hello, Alice".
 
 ```cpp
-class EchoServiceProxy : public EchoServiceBase
+class HelloServiceProxy : public HelloServiceBase
 {
 public:
-    EchoServiceProxy() = default;
-    virtual ~EchoServiceProxy() = default;
-    virtual std::string Echo(std::string data) override;
+    HelloServiceProxy() = default;
+    virtual ~HelloServiceProxy() = default;
+    virtual int Hello(HelloArgs args) override;
 };
 
-std::string EchoServiceProxy::Echo(std::string data)
+int HelloServiceProxy::Hello(HelloArgs args)
 {
-    CLIENT_CALL_RPC_OneParam(data);
+    CLIENT_CALL_RPC(args);
     return {};
 }
 
 int main(int argc, char* argv[])
 {
     auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" }); // Get an RPC Client object
-    auto EchoPtr = ClientStub->GetProxy<EchoServiceProxy>(); // Get an RPC Proxy object
-    EchoPtr->Echo("hello world!"); // Initiate the call
+    auto HelloPtr = ClientStub->GetProxy<HelloServiceProxy>(); // Get an RPC Proxy object
+    HelloArgs args;
+    args.set_username("Alice");
+    HelloPtr->Hello(args); // Call remote service
     return 0;
 }
 ```
@@ -137,33 +215,35 @@ int main(int argc, char* argv[])
 In the above example, the client calls a remote function but does not receive a return value. To write a client program that receives and handles the return value, modify the client code slightly.
 
 ```cpp
-class AsyncEchoServiceProxy : public EchoServiceBase
+class AsyncHelloServiceProxy : public HelloServiceBase
 {
 public:
-    AsyncEchoServiceProxy() = default;
-    virtual ~AsyncEchoServiceProxy() = default;
-    virtual std::string Echo(std::string data) override;
+    AsyncHelloServiceProxy() = default;
+    virtual ~AsyncHelloServiceProxy() = default;
+    virtual int Hello(HelloArgs args) override;
 private:
-    static void EchoCallback(std::string return_value);
+    static void HelloCallback(int return_value);
 };
 
-std::string AsyncEchoServiceProxy::Echo(std::string data)
+int AsyncHelloServiceProxy::Hello(HelloArgs args)
 {
-    CLIENT_CALL_RPC_OneParam_Asynchronously(&AsyncEchoServiceProxy::EchoCallback, data);
+    CLIENT_CALL_RPC_Asynchronously(&AsyncHelloServiceProxy::HelloCallback, data);
     return {};
 }
 
-void AsyncEchoServiceProxy::EchoCallback(std::string return_value)
+void AsyncHelloServiceProxy::HelloCallback(int return_value)
 {
-    std::cout << "Received " << return_value << std::endl;
+    std::cout << "Server returned " << return_value << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
     auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" }); // Get an RPC Client object
-    auto EchoPtr = ClientStub->GetProxy<AsyncEchoServiceProxy>(); // Get an RPC Proxy object
-    EchoPtr->Echo("hello world!"); // Initiate the call
-    sleep(1); // Wait for the return value
+    auto HelloPtr = ClientStub->GetProxy<AsyncHelloServiceProxy>(); // Get an RPC Proxy object
+    HelloArgs args;
+    args.set_username("Alice");
+    HelloPtr->Hello(args); // Call remote service and wait for response
+    sleep(1); // Grace period
     return 0;
 }
 ```
@@ -177,78 +257,75 @@ Synchronous calls are rarely used since they block the execution of the thread a
 Here is an example of using a `future` to implement a synchronous call.
 
 ```cpp
-class SyncEchoServiceProxy : public EchoServiceBase
+class SyncHelloServiceProxy : public HelloServiceBase
 {
 public:
-    SyncEchoServiceProxy() = default;
-    virtual ~SyncEchoServiceProxy() = default;
-    virtual std::string Echo(std::string data) override;
+    SyncHelloServiceProxy() = default;
+    virtual ~SyncHelloServiceProxy() = default;
+    virtual int Hello(HelloArgs args) override;
 };
 
-std::string SyncEchoServiceProxy::Echo(std::string data)
+int SyncHelloServiceProxy::Hello(HelloArgs args)
 {
-    std::promise<std::string> p;
-    std::future<std::string> f = p.get_future();
-    std::function<void(std::string)> cb = [&p](std::string s) {
-        p.set_value(s);
+    std::promise<int> p;
+    std::future<int> f = p.get_future();
+    std::function<void(int)> cb = [&p](int ret) {
+        p.set_value(ret);
     };
-    CLIENT_CALL_RPC_OneParam_Asynchronously(cb, data);
+    CLIENT_CALL_RPC_Asynchronously(cb, args);
     return f.get();
 }
 
 int main(int argc, char* argv[])
 {
-    auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" });
-    auto EchoPtr = ClientStub->GetProxy<SyncEchoServiceProxy>();
-    std::string ret = EchoPtr->Echo("hello world!");
-    std::cout << ret << std::endl;
+    auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" }); // Get an RPC Client object
+    auto HelloPtr = ClientStub->GetProxy<AsyncHelloServiceProxy>(); // Get an RPC Proxy object
+    HelloArgs args;
+    args.set_username("Alice");
+    int return_value = HelloPtr->Hello(args); // Call remote service and wait for response
+    std::cout << "Server returned " << return_value << std::endl;
     return 0;
 }
 ```
 
 Running this client will print "Server says: hello world!" on the main thread, instead of the asynchronous thread through a callback.
 
-## Overall Design
+## Layer Design
 
-The module division of this system is based on trpc-cpp.
+The layer division of this system is similar to trpc-cpp.
 
-The structure definitions for request and response messages are as follows:
+### 1. **Serialization Layer**
 
-```cpp
-struct RpcHeader
-{
-    unsigned short magic;
-    unsigned short version;
-    bool need_return;
-    int seqno;
-    int body_length;
-    char servicename[MAX_RPC_NAME_SIZE];
-};
+The Serialization Layer is used to convert complex data types (such as objects or structs) into a byte stream that can be transmitted over the network.
 
-struct RpcBody
-{
-    char parameters[MAX_RPC_PARAMS_SIZE];
-};
+### 2. **Common Layer**
 
-struct RpcResult
-{
-    int seqno;
-    int type; // 1 - int, 2 - float, 3 - string
-    char return_buffer[MAX_RPC_RETURN_VALUE];
-};
-```
+The Common layer implements general features like the RPC call interface, global UID management, asynchronous logging, and timer management.
 
-- `magic` is used by the server to quickly filter out data packets that don't belong to this RPC protocol.
-- `servicename` is the name of the service used by the server to identify the request type and dispatch it to the corresponding routine.
-- The request and response of a single call share the same `seqno`, which helps the client distribute return values to different RPC protocols.
-- `need_return` indicates whether the server should return a function’s result.
-- `parameters` contains the function parameters.
-- `type` is used by the client to distinguish the return value type, and `return_buffer` contains the function's return value.
+### 3. **Runtime Module**
 
-The Serialization layer implements serialization methods for reading and writing the `parameters` and `return_buffer` fields of the RPC.
+The **Runtime Module** provides the execution environment for the RPC framework.
 
-The Runtime layer, based on libevent, implements a Reactor+Epoll ET (edge-triggered) IO multiplexing model with a thread pool. It defines an event handling base class `EventHandler`, making it easier to inherit and override event handling logic.
+#### 1. **Event Handler Abstraction**
+
+The event handler abstraction enables the runtime to manage different events, such as incoming connect() request or RPC packets, without directly coupling the application logic to event-driven mechanisms.
+
+#### 2. **Thread Pool**
+
+The **Thread Pool** ensures that the framework can handle multiple concurrent RPC requests in a scalable and efficient manner.
+
+#### 3. **Reactor Model**
+
+The **Reactor Model** enables asynchronous, event-driven handling of I/O operations.
+
+### 4. **Transport layer**
 
 The Transport layer wraps Linux system calls for low-level socket communication, establishing a TCP channel between the server and client and passing received data to the Runtime layer.
 
-The Common layer implements general features like the RPC call interface, global UID management, asynchronous logging, and timer management.
+### 5. **Client Layer**
+
+Send requests for remote procedure calls (RPC) to the server and waiting return values.
+
+### 5. **Server Layer**
+
+Map client requests to specific functions or methods on the server. Marshall execution of the requested remote procedure and sending the result back to the client.As well as error handling and sending appropriate failure responses.
