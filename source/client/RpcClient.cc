@@ -1,6 +1,5 @@
 #include <string.h>
 #include <thread>
-#include <sys/epoll.h>
 
 #include <client/RpcClient.hh>
 

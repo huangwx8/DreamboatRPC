@@ -27,6 +27,11 @@ static int setnonblocking(int fd)
     return old_option;
 }
 
+Poller::EPOLL_FLAGS_IN = EPOLLIN | EPOLLERR | EPOLLRDHUP;
+Poller::EPOLL_FLAGS_IN_ONESHOT = EPOLLIN | EPOLLERR | EPOLLRDHUP | EPOLLONESHOT;
+Poller::EPOLL_FLAGS_INOUT = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLRDHUP;
+Poller::EPOLL_FLAGS_INOUT_ONESHOT = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLRDHUP | EPOLLONESHOT;
+
 Poller::Poller(bool et)
     : Epollfd(epoll_create(1024)),
       MaxEvents(MAX_EVENTS),

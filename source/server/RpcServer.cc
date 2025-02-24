@@ -5,9 +5,6 @@
 #include <string>
 #include <thread>
 
-// linux
-#include <sys/epoll.h>
-
 // inner
 #include <server/RpcServer.hh>
 
@@ -17,11 +14,11 @@ void RpcServer::FileDescriptorEventDone(int fd)
 {
     if (_pipe.Empty(fd))
     {
-        _transport.GetReactor().GetPoller().ModEvent(fd, EPOLLIN | EPOLLERR | EPOLLRDHUP | EPOLLONESHOT);
+        _transport.GetReactor().GetPoller().ModEvent(fd, Poller::EPOLL_FLAGS_IN_ONESHOT);
     }
     else 
     {
-        _transport.GetReactor().GetPoller().ModEvent(fd, EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLRDHUP | EPOLLONESHOT);
+        _transport.GetReactor().GetPoller().ModEvent(fd, Poller::EPOLL_FLAGS_INOUT_ONESHOT);
     }
 }
 

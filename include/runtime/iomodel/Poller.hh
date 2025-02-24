@@ -15,6 +15,11 @@
 class Poller
 {
 public:
+    static uint32_t EPOLL_FLAGS_IN;
+    static uint32_t EPOLL_FLAGS_IN_ONESHOT;
+    static uint32_t EPOLL_FLAGS_INOUT;
+    static uint32_t EPOLL_FLAGS_INOUT_ONESHOT;
+
     Poller(bool et = false);
     ~Poller();
     std::vector<std::function<void()>> Dispatch(int Timeout, EventHandler &Handler);

@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <string>
-#include <sys/epoll.h>
 
 #include <transport/ClientTransport.hh>
 
@@ -65,7 +64,7 @@ void ClientTransport::HandleWriteEvent(int Fd)
     // 如果当前没有等待发送的Rpc，则关闭EPOLLOUT
     if (PendingRequests.empty()) 
     {
-        _poller.ModEvent(Connfd, EPOLLIN | EPOLLERR | EPOLLRDHUP);
+        _poller.ModEvent(Connfd, Poller::EPOLL_FLAGS_IN);
     }
 }
 
@@ -78,7 +77,7 @@ int ClientTransport::Connect(std::string ip, int port)
         exit(1);
     }
     // 监听所有事件
-    _poller.AddEvent(Connfd, EPOLLIN | EPOLLERR | EPOLLRDHUP);
+    _poller.AddEvent(Connfd, Poller::EPOLL_FLAGS_IN);
     return Connfd;
 }
 
@@ -91,7 +90,7 @@ void ClientTransport::Push(const RpcMessage& Message)
     // 新请求入队
     PendingRequests.push(Message);
     // 打开EPOLLOUT
-    _poller.ModEvent(Connfd, EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLRDHUP);
+    _poller.ModEvent(Connfd, Poller::EPOLL_FLAGS_INOUT);
 }
 
 void ClientTransport::Send(const RpcMessage& Message)
