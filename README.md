@@ -32,21 +32,20 @@ struct RpcResultHeader
     int seqno;
     int body_length;
 };
-```
 
-- `magic` is used by the server to quickly filter out data packets that don't belong to this RPC protocol.
-- `servicename` is the name of the service used by the server to identify the request type and dispatch it to the corresponding routine.
-- The request and response of a single call share the same `seqno`, which helps the client distribute return values to different RPC protocols.
-- `need_return` indicates whether the server should return a function’s result.
-- `parameters` contains the function parameters.
-- `type` is used by the client to distinguish the return value type, and `return_buffer` contains the function's return value.
-
-```cpp
 struct RpcBody
 {
     char parameters[MAX_RPC_PARAMS_SIZE];
 };
 ```
+
+- `magic` is used by the server to quickly filter out data packets that don't belong to this RPC protocol.
+- The request and response of a single call share the same `seqno`, which helps the client distribute return values to different RPC protocols.
+- `need_return` indicates whether the server should return a function’s result.
+- `seqno` represents the position of this RPC is at in sequence.
+- `body_length` the actual length in bytes of the body part.
+- `servicename` is the name of the service used by the server to identify the request type and dispatch it to the corresponding routine.
+- `parameters` contains the function parameters.
 
 The Serialization layer will fill the `parameters` buffer of RpcBody.
 
