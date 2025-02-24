@@ -24,13 +24,13 @@ static int get_belonged_bucket(int k)
     }
 }
 
-std::string NameServiceBase::GetNameInternal(int k)
+std::string NameServiceBase::GetNameInternal(GetNameArgs args)
 {
-    int index = get_belonged_bucket(k);
+    int index = get_belonged_bucket(args.id());
     std::string name;
 
     dict_locks[index].lock();
-    auto it = dicts[index].find(k);
+    auto it = dicts[index].find(args.id());
     if (it != dicts[index].end()) {
         name = it->second;
     }
@@ -42,19 +42,19 @@ std::string NameServiceBase::GetNameInternal(int k)
     return name;
 }
 
-int NameServiceBase::SetNameInternal(int k, std::string v)
+int NameServiceBase::SetNameInternal(SetNameArgs args)
 {
-    int index = get_belonged_bucket(k);
+    int index = get_belonged_bucket(args.id());
     int ret = 0;
 
     dict_locks[index].lock();
-    auto it = dicts[index].find(k);
+    auto it = dicts[index].find(args.id());
     if (it != dicts[index].end()) {
-        it->second = v;
+        it->second = args.name();
         ret = 1;
     }
     else {
-        dicts[index][k] = v;
+        dicts[index][args.id()] = args.name();
         ret = 2;
     }
     dict_locks[index].unlock();

@@ -8,7 +8,7 @@ public:
     NameGetterImpl(NameServiceBase* base): _base(base) {}
     virtual ~NameGetterImpl() = default;
     virtual RpcResult Handle(const RpcMessage& Context) override;
-    virtual std::string GetName(int) override;
+    virtual std::string GetName(GetNameArgs args) override;
 private:
     NameServiceBase* _base;
 };
@@ -19,7 +19,7 @@ public:
     NameSetterImpl(NameServiceBase* base): _base(base) {}
     virtual ~NameSetterImpl() = default;
     virtual RpcResult Handle(const RpcMessage& Context) override;
-    virtual int SetName(int, std::string) override;
+    virtual int SetName(SetNameArgs args) override;
 private:
     NameServiceBase* _base;
 };

@@ -29,7 +29,9 @@ void crazy_read(std::shared_ptr<RpcClient> ClientStub)
     auto Getter = ClientStub->GetProxy<NameGetterProxy>();
     for (int i = 0; i < 100000; i += (std::rand() % 1000)) {
         log_dev("make a read request at %d\n", i);
-        Getter->GetName(i);
+        GetNameArgs args;
+        args.set_id(i);
+        Getter->GetName(args);
     }
 }
 
@@ -45,7 +47,10 @@ void crazy_write(std::shared_ptr<RpcClient> ClientStub)
             }
         }
         log_dev("make a write request at %d with %s\n", i, code.c_str());
-        Setter->SetName(i, code);
+        SetNameArgs args;
+        args.set_id(i);
+        args.set_name(code);
+        Setter->SetName(args);
     }
 }
 

@@ -78,6 +78,9 @@
         "span": "cpp",
         "stack": "cpp",
         "unordered_set": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp",
+        "cinttypes": "cpp"
     }
 }

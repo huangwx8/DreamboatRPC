@@ -7,7 +7,7 @@ class NameGetterProxy : public NameGetterBase
 public:
     NameGetterProxy() = default;
     virtual ~NameGetterProxy() = default;
-    virtual std::string GetName(int) override;
+    virtual std::string GetName(GetNameArgs) override;
 };
 
 class NameSetterProxy : public NameSetterBase
@@ -15,5 +15,5 @@ class NameSetterProxy : public NameSetterBase
 public:
     NameSetterProxy() = default;
     virtual ~NameSetterProxy() = default;
-    virtual int SetName(int, std::string) override;
+    virtual int SetName(SetNameArgs) override;
 };

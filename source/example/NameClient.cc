@@ -5,17 +5,17 @@
 #include <common/RpcUtils.hh>
 #include <common/Logger.hh>
 
-std::string NameGetterProxy::GetName(int k)
+std::string NameGetterProxy::GetName(GetNameArgs args)
 {
     std::function<void(std::string)> cb = [=](std::string s) {
-        log_dev("GetName(%d) from server: %s\n", k, s.c_str());
+        log_dev("GetName(%d) from server: %s\n", args.id(), s.c_str());
     };
-    CLIENT_CALL_RPC_OneParam_Asynchronously(cb, k);
+    CLIENT_CALL_RPC_Proto_Asynchronously(cb, args);
     return {};
 }
 
-int NameSetterProxy::SetName(int k, std::string v)
+int NameSetterProxy::SetName(SetNameArgs args)
 {
-    CLIENT_CALL_RPC_TwoParams(k ,v);
+    CLIENT_CALL_RPC_Proto(args);
     return 0;
 }

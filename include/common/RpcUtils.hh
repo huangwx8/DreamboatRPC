@@ -16,6 +16,16 @@ void ParseParam(const char* In, const char* Type, void* Out, ArgumentTypes... Ar
     ParseParam(In + Offset, Arguments...);
 }
 
+template<typename T>
+void ParseProtoStruct(const char* In, T& Out)
+{
+    char data[4096];
+
+    ParseParam(In, "string", data);
+
+    Out.ParseFromString(data);
+}
+
 int PackParam(char* Out);
 int PackParam(char* Out, int In);
 int PackParam(char* Out, float In);
@@ -27,6 +37,12 @@ int PackParam(char* Out, T In, ArgumentTypes... Arguments)
 {
     int Offset = PackParam(Out, In);
     return Offset + PackParam(Out + Offset, Arguments...);
+}
+
+template<typename T>
+int PackProtoStruct(char* Out, T In)
+{
+    return PackParam(Out, In.SerializeAsString());
 }
 
 #define INIT_RPCMESSAGE()\
@@ -90,6 +106,20 @@ strcpy(__RpcMessage.header.servicename, GetServiceName());\
     AsyncInvoke(__RpcMessage, F);\
 }
 
+#define CLIENT_CALL_RPC_Proto(P)\
+{\
+    INIT_RPCMESSAGE()\
+    __RpcMessage.header.body_length = PackProtoStruct(&(__RpcMessage.body.parameters[0]), P);\
+    Invoke(__RpcMessage);\
+}
+
+#define CLIENT_CALL_RPC_Proto_Asynchronously(F, P)\
+{\
+    INIT_RPCMESSAGE()\
+    __RpcMessage.header.body_length = PackProtoStruct(&(__RpcMessage.body.parameters[0]), P);\
+    Invoke(__RpcMessage);\
+}
+
 RpcResult ToRpcResult(int i);
 
 RpcResult ToRpcResult(float f);
@@ -126,5 +156,13 @@ RpcResult ToRpcResult(std::string s);
     T3 Arg3;\
     ParseParam(&(Context.body.parameters[0]), #T1, &Arg1, #T2, &Arg2, #T3, &Arg3);\
     auto ret = RpcImpl(Arg1, Arg2, Arg3);\
+    return ToRpcResult(ret);\
+}
+
+#define SERVER_EXEC_RPC_Proto(RpcImpl, T)\
+{\
+    T Arg;\
+    ParseProtoStruct(&(Context.body.parameters[0]), Arg);\
+    auto ret = RpcImpl(Arg);\
     return ToRpcResult(ret);\
 }

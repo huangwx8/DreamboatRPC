@@ -8,6 +8,8 @@
 #include <common/RpcTypes.hh>
 #include <common/RpcServiceBase.hh>
 
+#include <NameService.pb.h>
+
 #define NUM_NAME_DICTIONARY_BUCKETS 5
 
 class NameServiceBase
@@ -15,8 +17,8 @@ class NameServiceBase
 public:
     NameServiceBase() = default;
     ~NameServiceBase() = default;
-    std::string GetNameInternal(int);
-    int SetNameInternal(int, std::string);
+    std::string GetNameInternal(GetNameArgs);
+    int SetNameInternal(SetNameArgs);
 private:
     std::map<int, std::string> dicts[NUM_NAME_DICTIONARY_BUCKETS];
     mutable std::mutex dict_locks[NUM_NAME_DICTIONARY_BUCKETS];
@@ -30,7 +32,7 @@ public:
         ServiceName = "NameGetter";
     }
     virtual ~NameGetterBase() = default;
-    virtual std::string GetName(int) = 0;
+    virtual std::string GetName(GetNameArgs) = 0;
 };
 
 class NameSetterBase : public RpcServiceBase
@@ -41,5 +43,5 @@ public:
         ServiceName = "NameSetter";
     }
     virtual ~NameSetterBase() = default;
-    virtual int SetName(int, std::string) = 0;
+    virtual int SetName(SetNameArgs) = 0;
 };
