@@ -1,5 +1,43 @@
 # DearmboatRPC
 
+## Prerequisites
+
+This framework can only be run on Linux.
+
+If you are using Windows or Macos, try WSL, Docker, or Cloud Development.
+
+At first, install necessary tool chain.
+
+```bash
+apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    g++ \
+    clang \
+    gdb \
+    git \
+    protobuf-compiler \
+    libprotobuf-dev \
+    libprotoc-dev \
+    vim \
+    curl
+```
+
+## Setup
+
+After tool chain is properly installed, you should be able to build this framework with CMake.
+
+```bash
+mkdir build
+cd build
+cmake ..
+make
+```
+
+As a result, you should see two executable programs lying in build/ folder, Server and Client.
+
+FYI, you can find the entries of these two program in source/example/Server.cc and source/example/Client.cc. You are allowed to modify these two files as you will to implement your own RPC applications.
+
 ## Overall Design
 
 The module division of this system is based on trpc-cpp.
