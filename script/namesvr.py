@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import argparse
 import os
+import sys
 import time
 from threading import Thread
 
@@ -20,11 +21,11 @@ def monitor_clients():
             if service_map[client_id]['status'] == 'ONLINE':
                 if current_time - service_map[client_id]['alive_timestamp'] > MAX_INACTIVITY_TIME:
                     service_map[client_id]['status'] = 'OFFLINE'
-                    print(f"{client_id} goes OFFLINE")
+                    print(f"{client_id} goes OFFLINE", file=sys.stderr)
             elif service_map[client_id]['status'] == 'OFFLINE':
                 if current_time - service_map[client_id]['alive_timestamp'] > MAX_INACTIVITY_TIME + MAX_OFFLINE_TIME:
                     service_map.pop(client_id, None)
-                    print(f"{client_id} is removed")
+                    print(f"{client_id} is removed", file=sys.stderr)
         time.sleep(10)
 
 # Start the monitoring thread
