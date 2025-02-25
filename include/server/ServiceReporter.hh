@@ -34,6 +34,11 @@ public:
      */
     bool RegisterMyself(std::string ip, int port, std::string service_name);
 
+    /** 
+     * Tell registry that I am alive
+     */
+    bool SendHeartbeat(std::string ip, int port);
+
 private:
 
     Options _options;

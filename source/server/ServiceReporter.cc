@@ -84,3 +84,59 @@ bool ServiceReporter::RegisterMyself(std::string ip, int port, std::string servi
 
     return true;
 }
+
+bool ServiceReporter::SendHeartbeat(std::string ip, int port)
+{
+    CURL* curl = curl_easy_init();
+    if (!curl)
+    {
+        return false;
+    }
+
+    // Prepare empty JSON data for heartbeat
+    Json::Value json_data;
+    json_data["ip"] = ip;
+    json_data["port"] = port;
+    Json::StreamWriterBuilder writer;
+    std::string json_str = Json::writeString(writer, json_data);
+
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "http://%s:%d/heartbeat", _options.svr_ip.c_str(), _options.svr_port);
+
+    std::string url(buffer);
+
+    // Create a curl_slist for custom headers
+    struct curl_slist* headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    // Set the URL and POST data
+    std::string response_data;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str()); // Server URL
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_str.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, json_str.length());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    // Perform the request
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK)
+    {
+        curl_easy_cleanup(curl);
+        return false;
+    }
+
+    long response_code;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+    if (response_code != 200)
+    {
+        curl_easy_cleanup(curl);
+        return false;
+    }
+
+    // Clean up cURL
+    curl_easy_cleanup(curl);
+
+    return true;
+}

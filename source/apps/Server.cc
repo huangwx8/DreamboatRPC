@@ -1,5 +1,7 @@
 #include <string>
 #include <cstdio>
+#include <future>
+#include <unistd.h>
 
 #include <common/RpcUtils.hh>
 #include <common/Logger.hh>
@@ -55,6 +57,26 @@ int main(int argc, char* argv[])
 
     reporter->RegisterMyself(options.ip_addr, options.port, "KV");
 
-    // 启动RPC服务端
-    ServerStub.Main(argc, argv);
+    // Start rpc server thread
+    auto fu1 = std::async([&](){
+        ServerStub.Main(argc, argv);
+    });
+
+    // Start heartbeat thread
+    auto fu2 = std::async([&](){
+        while (true) {
+            bool success = reporter->SendHeartbeat(options.ip_addr, options.port);
+            if (!success)
+            {
+                log_err("Heartbeat failed!\n");
+                exit(1);
+            }
+            sleep(5);
+        }
+    });
+
+    fu1.wait();
+    fu2.wait();
+
+    return 0;
 }

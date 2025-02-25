@@ -30,8 +30,9 @@ static int ConnectTo(std::string ip, int port)
 
     if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
     {
-        log_dev("connection failed\n");
+        log_err("connect %s:%d failed\n", ip.c_str(), port);
         close(sockfd);
+        return -1;
     }
 
     return sockfd;
@@ -73,7 +74,6 @@ int ClientTransport::Connect(std::string ip, int port)
     Connfd = ConnectTo(ip, port);
     if (Connfd < 0)
     {
-        log_err("Connect failed");
         exit(1);
     }
     // 监听所有事件

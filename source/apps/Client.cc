@@ -66,13 +66,23 @@ int main(int argc, char* argv[])
 
     std::vector<ServiceDiscoverer::DiscoveredResult> results = discovery->RequestServiceList();
 
+    bool foundSvr = false;
+
     for (ServiceDiscoverer::DiscoveredResult& result : results)
     {
         if (result.service_name == options.callee)
         {
             options.svr_ip = result.ip;
             options.svr_port = result.port;
+            foundSvr = true;
+            break;
         }
+    }
+
+    if (!foundSvr)
+    {
+        printf("Cannot find callee %s's address\n", options.callee.c_str());
+        return 1;
     }
 
     auto&& ClientStub = RpcClient::GetRpcClient(options);
