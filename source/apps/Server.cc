@@ -7,7 +7,7 @@
 
 #include <server/RpcServer.hh>
 
-#include <example/NameServer.hh>
+#include <apps/kv/KVServer.hh>
 
 static RpcServer::Options GetOptions(int argc, char* argv[])
 {
@@ -31,9 +31,9 @@ static RpcServer::Options GetOptions(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-    NameServiceBase base;
-    NameGetterImpl GetterImpl(&base);
-    NameSetterImpl SetterImpl(&base);
+    KVServiceBase base;
+    KVGetterImpl GetterImpl(&base);
+    KVSetterImpl SetterImpl(&base);
     auto options = GetOptions(argc, argv);
     RpcServer ServerStub(options);
     

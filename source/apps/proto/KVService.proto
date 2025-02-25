@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-message GetNameArgs {
+message GetValueArgs {
   int32 id = 1;
 }
 
-message SetNameArgs {
+message SetValueArgs {
   int32 id = 1;
   string name = 2;
 }

@@ -1,32 +1,13 @@
-#include <example/NameService.hh>
+#include <apps/kv/KVService.hh>
 
-static int get_belonged_bucket(int k)
+static int getAllottedBucket(int k)
 {
-    if (k < 200000)
-    {
-        return 0;
-    }
-    else if (k < 400000)
-    {
-        return 1;
-    }
-    else if (k < 600000)
-    {
-        return 2;
-    }
-    else if (k < 800000)
-    {
-        return 3;
-    }
-    else 
-    {
-        return 4;
-    }
+    return (k / 200000) % 5;
 }
 
-std::string NameServiceBase::GetNameInternal(GetNameArgs args)
+std::string KVServiceBase::GetValueInternal(GetValueArgs args)
 {
-    int index = get_belonged_bucket(args.id());
+    int index = getAllottedBucket(args.id());
     std::string name;
 
     dict_locks[index].lock();
@@ -42,9 +23,9 @@ std::string NameServiceBase::GetNameInternal(GetNameArgs args)
     return name;
 }
 
-int NameServiceBase::SetNameInternal(SetNameArgs args)
+int KVServiceBase::SetValueInternal(SetValueArgs args)
 {
-    int index = get_belonged_bucket(args.id());
+    int index = getAllottedBucket(args.id());
     int ret = 0;
 
     dict_locks[index].lock();

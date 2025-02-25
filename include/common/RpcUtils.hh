@@ -50,14 +50,14 @@ RpcMessage __RpcMessage;\
 if (__RpcMessage.header.seqno == -1) return {};\
 strcpy(__RpcMessage.header.servicename, GetServiceName());\
 
-#define CLIENT_CALL_RPC(P)\
+#define CallRPC(P)\
 {\
     INIT_RPCMESSAGE()\
     __RpcMessage.header.body_length = PackProtoStruct(&(__RpcMessage.body.parameters[0]), P);\
     Invoke(__RpcMessage);\
 }
 
-#define CLIENT_CALL_RPC_Asynchronously(F, P)\
+#define CallRPCAsync(F, P)\
 {\
     INIT_RPCMESSAGE()\
     __RpcMessage.header.body_length = PackProtoStruct(&(__RpcMessage.body.parameters[0]), P);\
@@ -70,7 +70,7 @@ RpcResult ToRpcResult(float f);
 
 RpcResult ToRpcResult(std::string s);
 
-#define SERVER_EXEC_RPC(RpcImpl, T)\
+#define HandleRPC(RpcImpl, T)\
 {\
     T Arg;\
     ParseProtoStruct(&(Context.body.parameters[0]), Arg);\

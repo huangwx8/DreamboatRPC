@@ -89,7 +89,7 @@ make
 
 As a result, you should see two executable programs lying in build/ folder, Server and Client.
 
-FYI, you can find the entries of these two program in source/example/Server.cc and source/example/Client.cc. You are allowed to modify these two files as you will to implement your own RPC applications.
+FYI, you can find the entries of these two program in source/apps/Server.cc and source/apps/Client.cc. You are allowed to modify these two files as you will to implement your own RPC applications.
 
 ## Usage
 
@@ -157,7 +157,7 @@ public:
 
 RpcResult HelloServiceImpl::Handle(const RpcMessage& Context)
 {
-    SERVER_EXEC_RPC(Hello, HelloArgs);
+    HandleRPC(Hello, HelloArgs);
 }
 
 int HelloServiceImpl::Hello(HelloArgs args)
@@ -193,7 +193,7 @@ public:
 
 int HelloServiceProxy::Hello(HelloArgs args)
 {
-    CLIENT_CALL_RPC(args);
+    CallRPC(args);
     return {};
 }
 
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
 
 ### Using Callbacks
 
-In the above example, the client calls a remote function but does not receive a return value. To write a client program that receives and handles the return value, modify the client code slightly.
+In the above apps, the client calls a remote function but does not receive a return value. To write a client program that receives and handles the return value, modify the client code slightly.
 
 ```cpp
 class AsyncHelloServiceProxy : public HelloServiceBase
@@ -225,7 +225,7 @@ private:
 
 int AsyncHelloServiceProxy::Hello(HelloArgs args)
 {
-    CLIENT_CALL_RPC_Asynchronously(&AsyncHelloServiceProxy::HelloCallback, data);
+    CallRPCAsync(&AsyncHelloServiceProxy::HelloCallback, data);
     return {};
 }
 
@@ -246,13 +246,13 @@ int main(int argc, char* argv[])
 }
 ```
 
-In this example, we added callback handling code to the proxy class to process the return value received from the server. Running the client will display "Received Server says: hello world!" on the client.
+In this apps, we added callback handling code to the proxy class to process the return value received from the server. Running the client will display "Received Server says: hello world!" on the client.
 
 ### Synchronous Call
 
 Synchronous calls are rarely used since they block the execution of the thread and may impact performance. However, if you prefer a more concise syntax where the proxy’s return value is the server’s return value, it can be implemented easily. You may need additional tools to block the current thread, such as pipes or futures.
 
-Here is an example of using a `future` to implement a synchronous call.
+Here is an apps of using a `future` to implement a synchronous call.
 
 ```cpp
 class SyncHelloServiceProxy : public HelloServiceBase
@@ -270,7 +270,7 @@ int SyncHelloServiceProxy::Hello(HelloArgs args)
     std::function<void(int)> cb = [&p](int ret) {
         p.set_value(ret);
     };
-    CLIENT_CALL_RPC_Asynchronously(cb, args);
+    CallRPCAsync(cb, args);
     return f.get();
 }
 

@@ -8,7 +8,7 @@
 
 #include <client/RpcClient.hh>
 
-#include <example/NameClient.hh>
+#include <apps/kv/KVClient.hh>
 
 static RpcClient::Options GetOptions(int argc, char* argv[])
 {
@@ -26,18 +26,18 @@ static RpcClient::Options GetOptions(int argc, char* argv[])
 
 void crazy_read(std::shared_ptr<RpcClient> ClientStub)
 {
-    auto Getter = ClientStub->GetProxy<NameGetterProxy>();
+    auto Getter = ClientStub->GetProxy<KVGetterProxy>();
     for (int i = 0; i < 100000; i += (std::rand() % 1000)) {
         log_dev("make a read request at %d\n", i);
-        GetNameArgs args;
+        GetValueArgs args;
         args.set_id(i);
-        Getter->GetName(args);
+        Getter->GetValue(args);
     }
 }
 
 void crazy_write(std::shared_ptr<RpcClient> ClientStub)
 {
-    auto Setter = ClientStub->GetProxy<NameSetterProxy>();
+    auto Setter = ClientStub->GetProxy<KVSetterProxy>();
     std::string data = "I can see Russia from my house!";
     for (int i = 0; i < 100000; i += (std::rand() % 1000)) {
         std::string code = data;
@@ -47,10 +47,10 @@ void crazy_write(std::shared_ptr<RpcClient> ClientStub)
             }
         }
         log_dev("make a write request at %d with %s\n", i, code.c_str());
-        SetNameArgs args;
+        SetValueArgs args;
         args.set_id(i);
         args.set_name(code);
-        Setter->SetName(args);
+        Setter->SetValue(args);
     }
 }
 
