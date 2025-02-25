@@ -57,6 +57,8 @@ If you are using Windows or Macos, try WSL, Docker, or Cloud Development.
 
 At first, install necessary tool chain.
 
+On Ubuntu:
+
 ```bash
 apt-get update && apt-get install -y \
     build-essential \
@@ -69,7 +71,26 @@ apt-get update && apt-get install -y \
     libprotobuf-dev \
     libprotoc-dev \
     vim \
-    curl
+    curl \
+    jsoncpp-devel
+```
+
+On CentOS:
+
+```bash
+yum update && yum install -y \
+    build-essential \
+    cmake \
+    g++ \
+    clang \
+    gdb \
+    git \
+    protobuf-compiler \
+    libprotobuf-dev \
+    libprotoc-dev \
+    vim \
+    curl \
+    jsoncpp-devel
 ```
 
 ## Setup

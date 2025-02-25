@@ -21,6 +21,8 @@ class RpcServer: public FileDescriptorEventDelegate
 public:
     struct Options
     {
+        std::string namesvr_ip_addr;
+        int namesvr_port;
         std::string ip_addr;
         int port;
         std::string log_path;

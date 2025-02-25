@@ -10,8 +10,11 @@
 
 #include <apps/kv/KVClient.hh>
 
+#include <client/ServiceDiscoverer.hh>
+
 static RpcClient::Options GetOptions(int argc, char* argv[])
 {
+    const char* callee = parse_str(argc, argv, "-callee=");
     const char* ip = parse_str(argc, argv, "-ip=");
     int port = parse_int(argc, argv, "-port=");
     if (ip == nullptr || port == -1)
@@ -21,7 +24,7 @@ static RpcClient::Options GetOptions(int argc, char* argv[])
     }
     const char* log_path = parse_str(argc, argv, "-log=");
 
-    return RpcClient::Options{.svr_ip = std::string(ip), .svr_port = port, .log_path = log_path ? "log/" + std::string(log_path) : std::string()};
+    return RpcClient::Options{.callee = std::string(callee), .svr_ip = std::string(ip), .svr_port = port, .log_path = log_path ? "log/" + std::string(log_path) : std::string()};
 }
 
 void crazy_read(std::shared_ptr<RpcClient> ClientStub)
@@ -57,6 +60,21 @@ void crazy_write(std::shared_ptr<RpcClient> ClientStub)
 int main(int argc, char* argv[])
 {
     auto options = GetOptions(argc, argv);
+
+    std::shared_ptr<ServiceDiscoverer> discovery = ServiceDiscoverer::GetServiceDiscoverer(
+        {.svr_ip=options.svr_ip, .svr_port = options.svr_port});
+
+    std::vector<ServiceDiscoverer::DiscoveredResult> results = discovery->RequestServiceList();
+
+    for (ServiceDiscoverer::DiscoveredResult& result : results)
+    {
+        if (result.service_name == options.callee)
+        {
+            options.svr_ip = result.ip;
+            options.svr_port = result.port;
+        }
+    }
+
     auto&& ClientStub = RpcClient::GetRpcClient(options);
 
     auto fu1 = std::async(&crazy_read, ClientStub);

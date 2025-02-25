@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 project(DreamboatRPC)
 
 find_package(Protobuf REQUIRED)
+find_package(CURL REQUIRED)
+find_package(jsoncpp REQUIRED)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall")
@@ -12,6 +14,8 @@ set(OBJDIR obj)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/build)
 include_directories(${PROTOBUF_INCLUDE_DIRS})
+include_directories(${CURL_INCLUDE_DIRS})
+include_directories(${JSONCPP_INCLUDE_DIRS})
 
 # Find all .cc files in the common directory
 file(GLOB_RECURSE COMMON_SRCS ${CMAKE_SOURCE_DIR}/source/common/*.cc)
@@ -52,8 +56,8 @@ target_compile_definitions(Server PRIVATE BUILD_SERVER)
 target_compile_definitions(Client PRIVATE BUILD_CLIENT)
 
 # Link with necessary libraries
-target_link_libraries(Server protobuf pthread)
-target_link_libraries(Client protobuf pthread)
+target_link_libraries(Server protobuf pthread ${CURL_LIBRARIES} jsoncpp)
+target_link_libraries(Client protobuf pthread ${CURL_LIBRARIES} jsoncpp)
 
 # Optionally specify build type (Debug, Release)
 set(CMAKE_BUILD_TYPE Debug)
