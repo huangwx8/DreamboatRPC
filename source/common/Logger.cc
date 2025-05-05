@@ -31,6 +31,10 @@ void start_log(const char* filename)
 
 void log_dev(const char *format, ...)
 {
+    if (!logfile) {
+        return;
+    }
+
     // Prepare the log message with the timestamp
     std::ostringstream log_stream;
     log_stream << "[" << current_timestamp() << "] ";
@@ -66,5 +70,7 @@ void log_err(const char *format, ...)
 
 void stop_log()
 {
+    fflush(logfile);
+
     fclose(logfile);
 }

@@ -2,43 +2,43 @@
 
 static int getAllottedBucket(int k)
 {
-    return (k / 200000) % 5;
+    return (k / 2000) % 5;
 }
 
-std::string KVServiceBase::GetValueInternal(GetValueArgs args)
+GetValueRsp KVServiceBase::GetValueInternal(GetValueReq req)
 {
-    int index = getAllottedBucket(args.id());
-    std::string name;
+    int index = getAllottedBucket(req.id());
+    GetValueRsp rsp;
 
     dict_locks[index].lock();
-    auto it = dicts[index].find(args.id());
+    auto it = dicts[index].find(req.id());
     if (it != dicts[index].end()) {
-        name = it->second;
+        rsp.set_name(it->second);
     }
     else {
-        name = "not found";
+        rsp.set_name("not found");
     }
     dict_locks[index].unlock();
 
-    return name;
+    return rsp;
 }
 
-int KVServiceBase::SetValueInternal(SetValueArgs args)
+SetValueRsp KVServiceBase::SetValueInternal(SetValueReq req)
 {
-    int index = getAllottedBucket(args.id());
-    int ret = 0;
+    int index = getAllottedBucket(req.id());
+    SetValueRsp rsp;
 
     dict_locks[index].lock();
-    auto it = dicts[index].find(args.id());
+    auto it = dicts[index].find(req.id());
     if (it != dicts[index].end()) {
-        it->second = args.name();
-        ret = 1;
+        it->second = req.name();
+        rsp.set_code(1);
     }
     else {
-        dicts[index][args.id()] = args.name();
-        ret = 2;
+        dicts[index][req.id()] = req.name();
+        rsp.set_code(2);
     }
     dict_locks[index].unlock();
 
-    return ret;
+    return rsp;
 }

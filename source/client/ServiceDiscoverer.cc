@@ -29,7 +29,7 @@ static size_t cb(void* contents, size_t size, size_t nmemb, std::string* output)
     return total_size;
 }
 
-std::vector<ServiceDiscoverer::DiscoveredResult> ServiceDiscoverer::RequestServiceList()
+std::vector<ServiceDiscoverer::DiscoveredResult> ServiceDiscoverer::RequestServiceList(std::string callee)
 {
     std::vector<ServiceDiscoverer::DiscoveredResult> results;
 
@@ -39,15 +39,15 @@ std::vector<ServiceDiscoverer::DiscoveredResult> ServiceDiscoverer::RequestServi
         return results;
     }
 
-    char buffer[100];
-    snprintf(buffer, sizeof(buffer), "http://%s:%d/discover", _options.svr_ip.c_str(), _options.svr_port);
+    char buffer[200];  // Increased buffer size to accommodate the callee parameter
+    snprintf(buffer, sizeof(buffer), "http://%s:%d/discover?callee=%s", _options.svr_ip.c_str(), _options.svr_port, callee.c_str());
     
     std::string url(buffer);
 
-    // Set the URL and POST data
+    // Set the URL and HTTP method
     std::string response_data;
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);  // Use HTTP GET for querying
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
@@ -64,7 +64,7 @@ std::vector<ServiceDiscoverer::DiscoveredResult> ServiceDiscoverer::RequestServi
         return results;
     }
 
-    // Parse the JSON string
+    // Parse the JSON response
     Json::Value root;
     Json::CharReaderBuilder readerBuilder;
     std::unique_ptr<Json::CharReader> reader(readerBuilder.newCharReader());
@@ -91,10 +91,9 @@ std::vector<ServiceDiscoverer::DiscoveredResult> ServiceDiscoverer::RequestServi
         // Access values in each object
         std::string ip = element["ip"].asString();
         int port = element["port"].asInt();
-        std::string service_name = element["service_name"].asString();
         
-        // Save values
-        results.emplace_back(ServiceDiscoverer::DiscoveredResult{.ip=ip, .port=port, .service_name=service_name});
+        // Save the values
+        results.emplace_back(ServiceDiscoverer::DiscoveredResult{.ip=ip, .port=port});
     }
 
     // Clean up cURL

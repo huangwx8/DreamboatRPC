@@ -3,6 +3,7 @@
 #include <curl/curl.h>
 #include <json/json.h>
 
+#include <common/Sysutils.hh>
 #include <server/ServiceReporter.hh>
 
 
@@ -97,6 +98,8 @@ bool ServiceReporter::SendHeartbeat(std::string ip, int port)
     Json::Value json_data;
     json_data["ip"] = ip;
     json_data["port"] = port;
+    json_data["cpu_usage"] = get_cpu_usage();
+    json_data["memory_usage"] = get_memory_usage();
     Json::StreamWriterBuilder writer;
     std::string json_str = Json::writeString(writer, json_data);
 

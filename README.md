@@ -118,7 +118,7 @@ This section demonstrates how to implement a hello service to introduce the fram
 
 To perform remote calls, you need an Rpc proxy class on the client side to invoke the RPC call, and you need a specific implementation on the server side to execute the task and return the function result as well.
 
-### Writing the .proto
+### Writing your .proto file
 
 The first thing you need to do is to define the arguments of your service, in Dreamboat, we outsource this definition to `protobuf`.
 
@@ -143,7 +143,7 @@ private:
 }
 ```
 
-### Writing the Service Base Class
+### Defining your Serivce Base Class
 
 Inherit `RpcServiceBase`, set the `ServiceName` to uniquely identify the RPC service, and add a function declaration for the RPC function with its parameters and return values.
 
@@ -160,7 +160,7 @@ public:
 };
 ```
 
-### Writing the Service Implementation
+### Implementing your Service
 
 Inherit the `HelloServiceBase` class and implement the specific RPC function on the server. One limitation is that you need to implement the `Handle` function, which is the unified entry point for RPC processing.
 
@@ -178,7 +178,7 @@ public:
 
 RpcResult HelloServiceImpl::Handle(const RpcMessage& Context)
 {
-    HandleRPC(Hello, HelloArgs);
+    HandleRPC<HelloArgs>(Context, &Hello);
 }
 
 int HelloServiceImpl::Hello(HelloArgs args)
@@ -197,7 +197,9 @@ int main(int argc, char* argv[])
 }
 ```
 
-### Implementing a One-Way Call
+### Implementing your RPC Call
+
+#### Regular Usage
 
 Inherit `HelloServiceBase` and implement the RPC proxy on the client side. You only need to add a macro inside the client-side proxy function.
 
@@ -214,8 +216,7 @@ public:
 
 int HelloServiceProxy::Hello(HelloArgs args)
 {
-    CallRPC(args);
-    return {};
+    return CallRPC<int>(args);
 }
 
 int main(int argc, char* argv[])
@@ -229,9 +230,11 @@ int main(int argc, char* argv[])
 }
 ```
 
-### Using Callbacks
+#### Using Callbacks
 
-In the above apps, the client calls a remote function but does not receive a return value. To write a client program that receives and handles the return value, modify the client code slightly.
+In the above apps, the client calls a remote function and then wait for the response, that can block the main thread.
+
+If you want your RPC call to be more thread friendly, you are allowed to write a client program that receives and handles the return value asynchronously.
 
 ```cpp
 class AsyncHelloServiceProxy : public HelloServiceBase
@@ -267,43 +270,24 @@ int main(int argc, char* argv[])
 }
 ```
 
-In this apps, we added callback handling code to the proxy class to process the return value received from the server. Running the client will display "Received Server says: hello world!" on the client.
+In this apps, we added callback handling code to the proxy class to process the return value received from the server. Running the client will display "Server returned 0" on the client.
 
-### Synchronous Call
+### Service Discovery
 
-Synchronous calls are rarely used since they block the execution of the thread and may impact performance. However, if you prefer a more concise syntax where the proxy’s return value is the server’s return value, it can be implemented easily. You may need additional tools to block the current thread, such as pipes or futures.
+In modern distributed system, we typically do not designate the address of RPC server on client side.
 
-Here is an apps of using a `future` to implement a synchronous call.
+In order to provide better scalability, DreamboatRPC give you a more flexible way to discover the destination node to serve your client - centralized service discovery!
 
 ```cpp
-class SyncHelloServiceProxy : public HelloServiceBase
-{
-public:
-    SyncHelloServiceProxy() = default;
-    virtual ~SyncHelloServiceProxy() = default;
-    virtual int Hello(HelloArgs args) override;
-};
-
-int SyncHelloServiceProxy::Hello(HelloArgs args)
-{
-    std::promise<int> p;
-    std::future<int> f = p.get_future();
-    std::function<void(int)> cb = [&p](int ret) {
-        p.set_value(ret);
-    };
-    CallRPCAsync(cb, args);
-    return f.get();
-}
-
 int main(int argc, char* argv[])
 {
-    auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" }); // Get an RPC Client object
-    auto HelloPtr = ClientStub->GetProxy<AsyncHelloServiceProxy>(); // Get an RPC Proxy object
-    HelloArgs args;
-    args.set_username("Alice");
-    int return_value = HelloPtr->Hello(args); // Call remote service and wait for response
-    std::cout << "Server returned " << return_value << std::endl;
-    return 0;
+    // A client factory, help you with dynamic addressing and load balancing.
+    RpcClientFactory factory({ "127.0.0.1", 5000, "client.log" });
+
+    // Discover a appropriate server and make a client stub
+    auto&& ClientStub = factory.GetRpcClient("Hello");
+
+    // Use ClientStub to do your job
 }
 ```
 

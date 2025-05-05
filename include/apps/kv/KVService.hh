@@ -17,8 +17,8 @@ class KVServiceBase
 public:
     KVServiceBase() = default;
     ~KVServiceBase() = default;
-    std::string GetValueInternal(GetValueArgs);
-    int SetValueInternal(SetValueArgs);
+    GetValueRsp GetValueInternal(GetValueReq);
+    SetValueRsp SetValueInternal(SetValueReq);
 private:
     std::map<int, std::string> dicts[NUM_NAME_DICTIONARY_BUCKETS];
     mutable std::mutex dict_locks[NUM_NAME_DICTIONARY_BUCKETS];
@@ -32,7 +32,7 @@ public:
         ServiceName = "KVGetter";
     }
     virtual ~KVGetterBase() = default;
-    virtual std::string GetValue(GetValueArgs) = 0;
+    virtual GetValueRsp GetValue(GetValueReq) = 0;
 };
 
 class KVSetterBase : public RpcServiceBase
@@ -43,5 +43,5 @@ public:
         ServiceName = "KVSetter";
     }
     virtual ~KVSetterBase() = default;
-    virtual int SetValue(SetValueArgs) = 0;
+    virtual SetValueRsp SetValue(SetValueReq) = 0;
 };

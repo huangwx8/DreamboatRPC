@@ -5,17 +5,16 @@
 #include <common/RpcUtils.hh>
 #include <common/Logger.hh>
 
-std::string KVGetterProxy::GetValue(GetValueArgs args)
+GetValueRsp KVGetterProxy::GetValue(GetValueReq req)
 {
-    std::function<void(std::string)> cb = [=](std::string s) {
-        log_dev("GetValue(%d) from server: %s\n", args.id(), s.c_str());
+    std::function<void(GetValueRsp)> cb = [=](GetValueRsp s) {
+        printf("GetValue(%d) from server: %s\n", req.id(), s.name().c_str());
     };
-    CallRPCAsync(cb, args);
+    CallRPCAsync(req, cb);
     return {};
 }
 
-int KVSetterProxy::SetValue(SetValueArgs args)
+SetValueRsp KVSetterProxy::SetValue(SetValueReq req)
 {
-    CallRPC(args);
-    return 0;
+    return CallRPC<SetValueRsp>(req);
 }

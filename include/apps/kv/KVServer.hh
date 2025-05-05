@@ -8,7 +8,7 @@ public:
     KVGetterImpl(KVServiceBase* base): _base(base) {}
     virtual ~KVGetterImpl() = default;
     virtual RpcResult Handle(const RpcMessage& Context) override;
-    virtual std::string GetValue(GetValueArgs args) override;
+    virtual GetValueRsp GetValue(GetValueReq req) override;
 private:
     KVServiceBase* _base;
 };
@@ -19,7 +19,7 @@ public:
     KVSetterImpl(KVServiceBase* base): _base(base) {}
     virtual ~KVSetterImpl() = default;
     virtual RpcResult Handle(const RpcMessage& Context) override;
-    virtual int SetValue(SetValueArgs args) override;
+    virtual SetValueRsp SetValue(SetValueReq req) override;
 private:
     KVServiceBase* _base;
 };

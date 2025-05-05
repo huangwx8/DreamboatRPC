@@ -10,6 +10,8 @@
 
 #include <server/RpcEventHandler.hh>
 
+#include <server/ServiceReporter.hh>
+
 class RpcServiceBase;
 class ServerTransport;
 class RpcRequestHandler;
@@ -54,4 +56,5 @@ private:
     ServerTransport _transport;
     RpcRequestHandler _receiver;
     RpcResultSender _sender;
+    std::shared_ptr<ServiceReporter> _reporter;
 };

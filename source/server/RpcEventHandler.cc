@@ -5,6 +5,9 @@
 
 // unix
 #include <sys/socket.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 // inner
 #include <server/RpcEventHandler.hh>
@@ -18,7 +21,7 @@ RpcResult ReturnValuePipe::Read(int fd)
 {
     assert(!_return_values[fd].empty());
     // 从fd对应的等待队列中拿一个元素
-    auto&& result = _return_values[fd].front();
+    RpcResult result = _return_values[fd].front();
     _return_values[fd].pop();
     return result;
 }
@@ -105,12 +108,28 @@ void RpcRequestHandler::AddProxy(RpcServiceBase* Service)
 
 RpcResultSender::RpcResultSender(ReturnValuePipe* pipe, FileDescriptorEventDelegate* delegate): _pipe(pipe), _finished(delegate) {}
 
+static std::string logData(const void* data, size_t size) {
+    const unsigned char* byteData = static_cast<const unsigned char*>(data);
+    std::stringstream ss;  // Use stringstream to accumulate the log in a string
+
+    // Log each byte in hexadecimal format
+    for (size_t i = 0; i < size; ++i) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)byteData[i] << " ";
+    }
+
+    // Convert the stringstream to a std::string and return it
+    return ss.str();
+}
+
 void RpcResultSender::HandleWriteEvent(int connfd)
 {
-    log_dev("RpcResultSender::HandleWriteEvent: fd = [%d]\n", connfd);
-    
     RpcResult Result = _pipe->Read(connfd);
     int ret = send(connfd, &Result, sizeof(RpcResult), 0);
+    auto data = logData(&Result, sizeof(RpcResult));
+
+    log_dev("RpcResultSender::HandleWriteEvent: fd = [%d], seqno=%d, data=%s\n",
+         connfd, Result.seqno, data.c_str());
+
     assert(ret != -1);
     _finished->FileDescriptorEventDone(connfd);
 }

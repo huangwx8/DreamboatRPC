@@ -29,7 +29,6 @@ public:
         std::string callee;
         std::string svr_ip;
         int svr_port;
-        std::string log_path;
     };
 
 public:

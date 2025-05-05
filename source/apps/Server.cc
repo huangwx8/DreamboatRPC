@@ -8,7 +8,6 @@
 #include <common/ArgsParser.hh>
 
 #include <server/RpcServer.hh>
-#include <server/ServiceReporter.hh>
 
 #include <apps/kv/KVServer.hh>
 
@@ -48,35 +47,10 @@ int main(int argc, char* argv[])
     auto options = GetOptions(argc, argv);
     RpcServer ServerStub(options);
     
-    // 实现绑定到RPC服务端
     ServerStub.RegisterService(&GetterImpl);
     ServerStub.RegisterService(&SetterImpl);
 
-    std::shared_ptr<ServiceReporter> reporter = ServiceReporter::GetServiceReporter(
-        {.svr_ip=options.namesvr_ip_addr, .svr_port = options.namesvr_port});
-
-    reporter->RegisterMyself(options.ip_addr, options.port, "KV");
-
-    // Start rpc server thread
-    auto fu1 = std::async([&](){
-        ServerStub.Main(argc, argv);
-    });
-
-    // Start heartbeat thread
-    auto fu2 = std::async([&](){
-        while (true) {
-            bool success = reporter->SendHeartbeat(options.ip_addr, options.port);
-            if (!success)
-            {
-                log_err("Heartbeat failed!\n");
-                exit(1);
-            }
-            sleep(5);
-        }
-    });
-
-    fu1.wait();
-    fu2.wait();
+    ServerStub.Main(argc, argv);
 
     return 0;
 }

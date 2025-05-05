@@ -21,7 +21,6 @@ public:
     {
         std::string ip;
         int port;
-        std::string service_name;
     };
 
 public:
@@ -39,7 +38,7 @@ public:
     /** 
      * Request a list of running services from name service
      */
-    std::vector<DiscoveredResult> RequestServiceList();
+    std::vector<DiscoveredResult> RequestServiceList(std::string callee);
 
 private:
 

@@ -5,24 +5,24 @@
 
 RpcResult KVGetterImpl::Handle(const RpcMessage& Context)
 {
-    HandleRPC(KVGetterImpl::GetValue, GetValueArgs);
+    HandleRPC(GetValueReq, GetValueRsp, KVGetterImpl::GetValue);
 }
 
-std::string KVGetterImpl::GetValue(GetValueArgs args)
+GetValueRsp KVGetterImpl::GetValue(GetValueReq req)
 {
-    auto ret = _base->GetValueInternal(args);
-    log_dev("KVGetterImpl::GetValue return %s\n", ret.c_str());
+    auto ret = _base->GetValueInternal(req);
+    log_dev("KVGetterImpl::GetValue return %s\n", ret.name().c_str());
     return ret;
 }
 
 RpcResult KVSetterImpl::Handle(const RpcMessage& Context)
 {
-    HandleRPC(KVSetterImpl::SetValue, SetValueArgs);
+    HandleRPC(SetValueReq, SetValueRsp, KVSetterImpl::SetValue);
 }
 
-int KVSetterImpl::SetValue(SetValueArgs args)
+SetValueRsp KVSetterImpl::SetValue(SetValueReq req)
 {
-    auto ret = _base->SetValueInternal(args);
-    log_dev("KVSetterImpl::SetValue return %d\n", ret);
+    auto ret = _base->SetValueInternal(req);
+    log_dev("KVSetterImpl::SetValue return %d\n", ret.code());
     return ret;
 }

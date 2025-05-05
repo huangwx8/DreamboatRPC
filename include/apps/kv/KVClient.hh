@@ -7,7 +7,7 @@ class KVGetterProxy : public KVGetterBase
 public:
     KVGetterProxy() = default;
     virtual ~KVGetterProxy() = default;
-    virtual std::string GetValue(GetValueArgs) override;
+    virtual GetValueRsp GetValue(GetValueReq) override;
 };
 
 class KVSetterProxy : public KVSetterBase
@@ -15,5 +15,5 @@ class KVSetterProxy : public KVSetterBase
 public:
     KVSetterProxy() = default;
     virtual ~KVSetterProxy() = default;
-    virtual int SetValue(SetValueArgs) override;
+    virtual SetValueRsp SetValue(SetValueReq) override;
 };

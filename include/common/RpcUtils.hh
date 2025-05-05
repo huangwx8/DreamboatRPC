@@ -4,6 +4,8 @@
 #include <serialization/Serializer.hh>
 #include <string.h>
 #include <string>
+#include <future>
+#include <cassert>
 
 using string = char[512];
 
@@ -45,35 +47,11 @@ int PackProtoStruct(char* Out, T In)
     return PackParam(Out, In.SerializeAsString());
 }
 
-#define INIT_RPCMESSAGE()\
-RpcMessage __RpcMessage;\
-if (__RpcMessage.header.seqno == -1) return {};\
-strcpy(__RpcMessage.header.servicename, GetServiceName());\
-
-#define CallRPC(P)\
-{\
-    INIT_RPCMESSAGE()\
-    __RpcMessage.header.body_length = PackProtoStruct(&(__RpcMessage.body.parameters[0]), P);\
-    Invoke(__RpcMessage);\
-}
-
-#define CallRPCAsync(F, P)\
-{\
-    INIT_RPCMESSAGE()\
-    __RpcMessage.header.body_length = PackProtoStruct(&(__RpcMessage.body.parameters[0]), P);\
-    Invoke(__RpcMessage);\
-}
-
-RpcResult ToRpcResult(int i);
-
-RpcResult ToRpcResult(float f);
-
-RpcResult ToRpcResult(std::string s);
-
-#define HandleRPC(RpcImpl, T)\
-{\
-    T Arg;\
-    ParseProtoStruct(&(Context.body.parameters[0]), Arg);\
-    auto ret = RpcImpl(Arg);\
-    return ToRpcResult(ret);\
+template<typename T>
+RpcResult ToRpcResult(T output)
+{
+    RpcResult res;
+    int size = PackProtoStruct(res.return_buffer, output);
+    assert(size < MAX_RPC_RETURN_VALUE);
+    return res;
 }

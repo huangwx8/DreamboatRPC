@@ -31,12 +31,10 @@ RpcClient::RpcClient(Options options):
     _initialized(false),
     m_stop(false)
 {
-    start_log(options.log_path.c_str());
 }
 
 RpcClient::~RpcClient()
 {
-    stop_log();
     // Stop main()
     m_stop = true;
     // we cannot start destructor procedure before main() returns

@@ -1,6 +1,9 @@
 // std c
 #include <cstdio>
 #include <cstring>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 // linux
 #include <sys/socket.h>
@@ -13,82 +16,9 @@
 #include <common/Defines.hh>
 #include <common/Logger.hh>
 
-CallbackFunction::CallbackFunction():
-    IntCallback(nullptr),
-    FloatCallback(nullptr),
-    StringCallback(nullptr)
-{
-
-}
-
-CallbackFunction::~CallbackFunction()
-{
-    Free();
-}
-
-void CallbackFunction::Exec(int i) 
-{
-    if (IntCallback)
-    {
-        (*IntCallback)(i);
-    }
-}
-
-void CallbackFunction::Exec(float f) 
-{
-    if (FloatCallback)
-    {
-        (*FloatCallback)(f);
-    }
-}
-
-void CallbackFunction::Exec(std::string s) 
-{
-    if (StringCallback)
-    {
-        (*StringCallback)(s);
-    }
-}
-
-void CallbackFunction::Register(std::function<void(int)> func)
-{
-    Free();
-    IntCallback = new std::function<void(int)> (func);
-}
-
-void CallbackFunction::Register(std::function<void(float)> func)
-{
-    Free();
-    FloatCallback = new std::function<void(float)> (func);
-}
-
-void CallbackFunction::Register(std::function<void(std::string)> func)
-{
-    Free();
-    StringCallback = new std::function<void(std::string)> (func);
-}
-
-void CallbackFunction::Free()
-{
-    if (IntCallback) 
-    {
-        delete IntCallback;
-        IntCallback = nullptr;
-    }
-    if (FloatCallback) 
-    {
-        delete FloatCallback;
-        FloatCallback = nullptr;
-    }
-    if (StringCallback) 
-    {
-        delete StringCallback;
-        StringCallback = nullptr;
-    }
-}
 
 CallbacksHandler::CallbacksHandler():
-    CallidCallbackMapping(MAX_REQUESTS, CallbackFunction())
+    CallidCallbackMapping(MAX_REQUESTS, nullptr)
 {
     
 }
@@ -96,6 +26,19 @@ CallbacksHandler::CallbacksHandler():
 CallbacksHandler::~CallbacksHandler()
 {
 
+}
+
+static std::string logData(const void* data, size_t size) {
+    const unsigned char* byteData = static_cast<const unsigned char*>(data);
+    std::stringstream ss;  // Use stringstream to accumulate the log in a string
+
+    // Log each byte in hexadecimal format
+    for (size_t i = 0; i < size; ++i) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)byteData[i] << " ";
+    }
+
+    // Convert the stringstream to a std::string and return it
+    return ss.str();
 }
 
 void CallbacksHandler::HandleReadEvent(int Fd)
@@ -110,38 +53,15 @@ void CallbacksHandler::HandleReadEvent(int Fd)
         return;
     }
 
-    if (res.type == 1) 
-    {
-        int i;
-        ParseParam(res.return_buffer, "int", &i);
-        CallidCallbackMapping[res.seqno].Exec(i);
-    }
-    else if (res.type == 2)
-    {
-        float f;
-        ParseParam(res.return_buffer, "float", &f);
-        CallidCallbackMapping[res.seqno].Exec(f);
-    }
-    else if (res.type == 3) 
-    {
-        std::string s(res.return_buffer);
-        CallidCallbackMapping[res.seqno].Exec(s);
-    }
+    auto data = logData(&res, sizeof(RpcResult));
+
+    printf("CallbacksHandler::HandleReadEvent fd=%d, seqno=%d, data=%s\n", Fd, res.seqno, data.c_str());
+
+    CallidCallbackMapping[res.seqno]->Exec(res.return_buffer);
+
+    delete CallidCallbackMapping[res.seqno];
+
+    CallidCallbackMapping[res.seqno] = nullptr;
 
     Guid::RecycleGuid(res.seqno);
-}
-
-void CallbacksHandler::Register(int seqno, std::function<void(int)> callback) 
-{
-    CallidCallbackMapping[seqno].Register(callback);
-}
-
-void CallbacksHandler::Register(int seqno, std::function<void(float)> callback) 
-{
-    CallidCallbackMapping[seqno].Register(callback);
-}
-
-void CallbacksHandler::Register(int seqno, std::function<void(std::string)> callback) 
-{
-    CallidCallbackMapping[seqno].Register(callback);
 }
