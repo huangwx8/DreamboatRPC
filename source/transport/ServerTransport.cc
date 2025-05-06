@@ -100,15 +100,34 @@ void ServerTransport::HandleCloseEvent(int Fd)
 
 int ServerTransport::Accept()
 {
-    // accept a new tcp connection request
+    // Accept a new TCP connection request
     struct sockaddr_in ClientAddress;
     socklen_t ClientAddrLength = sizeof(ClientAddress);
     int Connfd = accept(_listenfd, (struct sockaddr*)&ClientAddress, &ClientAddrLength);
+
     if (Connfd < 0)
     {
         log_dev("ServerTransport::Accept: Accept failure, errno is %d\n", errno);
         return -1;
     }
-    log_dev("ServerTransport::Accept: Create a connection at fd [%d]\n", Connfd);
+
+    // Enlarge the socket buffer size (both receive and send buffers)
+    int bufferSize = 1024 * 1024;  // 1 MB buffer size, change as needed
+
+    if (setsockopt(Connfd, SOL_SOCKET, SO_RCVBUF, &bufferSize, sizeof(bufferSize)) < 0)
+    {
+        log_dev("ServerTransport::Accept: Failed to set receive buffer size: %s\n", strerror(errno));
+        close(Connfd);
+        return -1;
+    }
+
+    if (setsockopt(Connfd, SOL_SOCKET, SO_SNDBUF, &bufferSize, sizeof(bufferSize)) < 0)
+    {
+        log_dev("ServerTransport::Accept: Failed to set send buffer size: %s\n", strerror(errno));
+        close(Connfd);
+        return -1;
+    }
+
+    log_dev("ServerTransport::Accept: Created a connection at fd [%d], buffer size set to %d bytes\n", Connfd, bufferSize);
     return Connfd;
 }

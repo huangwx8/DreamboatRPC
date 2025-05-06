@@ -30,7 +30,7 @@ float get_cpu_usage() {
     prev_total = total;
     prev_idle = idle_time;
 
-    return (float)(total_diff - idle_diff) / (total_diff + 1e5) * 100.0f;
+    return (float)(total_diff - idle_diff) / (total_diff + 1e-3) * 100.0f;
 }
 
 // Function to retrieve the memory usage

@@ -17,20 +17,39 @@
 #include <common/Defines.hh>
 #include <common/Logger.hh>
 
-static int ConnectTo(std::string ip, int port)
-{
+static int ConnectTo(const std::string& ip, int port) {
     struct sockaddr_in server_address;
     bzero(&server_address, sizeof(server_address));
     server_address.sin_family = AF_INET;
-    inet_pton(AF_INET, ip.c_str(), &server_address.sin_addr);
+    if (inet_pton(AF_INET, ip.c_str(), &server_address.sin_addr) <= 0) {
+        log_err("Invalid IP address: %s\n", ip.c_str());
+        return -1;
+    }
     server_address.sin_port = htons(port);
 
     int sockfd = socket(PF_INET, SOCK_STREAM, 0);
-    assert(sockfd >= 0);
+    if (sockfd < 0) {
+        log_err("Socket creation failed: %s\n", strerror(errno));
+        return -1;
+    }
 
-    if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
-    {
-        log_err("connect %s:%d failed\n", ip.c_str(), port);
+    // Set the socket buffer size (both send and receive)
+    int bufferSize = 1024 * 1024;  // 1 MB buffer size, change as needed
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &bufferSize, sizeof(bufferSize)) < 0) {
+        log_err("Failed to set receive buffer size: %s\n", strerror(errno));
+        close(sockfd);
+        return -1;
+    }
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufferSize, sizeof(bufferSize)) < 0) {
+        log_err("Failed to set send buffer size: %s\n", strerror(errno));
+        close(sockfd);
+        return -1;
+    }
+
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
+        log_err("Connect failed: %s\n", strerror(errno));
         close(sockfd);
         return -1;
     }

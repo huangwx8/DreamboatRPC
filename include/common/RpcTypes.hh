@@ -47,14 +47,6 @@ struct RpcMessage
 
 struct RpcResult
 {
-    RpcResult()
-    {
-        seqno = 0;
-    }
-    RpcResult(const RpcResult& other)
-    {
-        seqno = other.seqno;
-    }
     int seqno;
     char return_buffer[MAX_RPC_RETURN_VALUE];
 };

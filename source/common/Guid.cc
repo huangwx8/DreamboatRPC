@@ -1,13 +1,17 @@
 #include <common/Guid.hh>
+#include <mutex>
 
 #define MAX_GUID 1024
 #define GET(i) ((size_t)i < Heap.size() ? Heap[i] : 0)
 
 std::vector<int> Guid::Heap = std::vector<int>();
 int Guid::Bound = 0;
+std::mutex HeapMutex;  // Mutex to protect access to Heap and Bound
 
 int Guid::GetGuid()
 {
+    std::lock_guard<std::mutex> lock(HeapMutex);
+
     auto Popitem = []() -> int 
     {
         int ret = Heap[0];
@@ -64,6 +68,8 @@ int Guid::GetGuid()
 
 void Guid::RecycleGuid(int id)
 {
+    std::lock_guard<std::mutex> lock(HeapMutex);
+    
     auto Pushitem = [](int id)
     {
         Heap.push_back(id);
@@ -87,4 +93,3 @@ void Guid::RecycleGuid(int id)
 
     Pushitem(id);
 }
-

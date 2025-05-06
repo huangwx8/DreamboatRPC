@@ -29,7 +29,7 @@ void start_log(const char* filename)
     logfile = fopen(filename, "w+");
 }
 
-void log_dev(const char *format, ...)
+void log_internal(const char *format, ...)
 {
     if (!logfile) {
         return;
@@ -44,7 +44,7 @@ void log_dev(const char *format, ...)
     va_start(args, format);
     
     // Format the log message with the given format and arguments
-    char buffer[1024]; // Buffer to hold the formatted message
+    char buffer[10240]; // Buffer to hold the formatted message
     vsnprintf(buffer, sizeof(buffer), format, args);
     
     // Append the formatted message to the timestamp
@@ -57,13 +57,60 @@ void log_dev(const char *format, ...)
     va_end(args);
 }
 
-void log_err(const char *format, ...)
+void log_dev(const char *format, ...)
 {
+    if (!logfile) {
+        return;
+    }
+
+    // Create a string stream to hold the final formatted string
+    std::ostringstream dev_format;
+    dev_format << "Debug: ";  // Add the "Debug: " prefix to the log message
+    
+    // Use va_list to handle variable arguments
     va_list args;
     va_start(args, format);
+    
+    // Format the log message with the "Debug: " prefix
+    char buffer[10240];  // Buffer to hold the formatted message
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    
+    // Append the formatted message to the dev_format stream
+    dev_format << buffer;
+    
+    // Forward the formatted log message to log_internal
+    log_internal(dev_format.str().c_str());
+    
+    fflush(logfile);
 
-    log_dev("Disastrous error! ");
-    log_dev(format, args);
+    va_end(args);
+}
+
+void log_err(const char *format, ...)
+{
+    if (!logfile) {
+        return;
+    }
+
+    // Create a string stream to hold the final formatted string
+    std::ostringstream dev_format;
+    dev_format << "Error: ";  // Add the "Error: " prefix to the log message
+    
+    // Use va_list to handle variable arguments
+    va_list args;
+    va_start(args, format);
+    
+    // Format the log message with the "Error: " prefix
+    char buffer[10240];  // Buffer to hold the formatted message
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    
+    // Append the formatted message to the dev_format stream
+    dev_format << buffer;
+    
+    // Forward the formatted log message to log_internal
+    log_internal(dev_format.str().c_str());
+    
+    fflush(logfile);
 
     va_end(args);
 }
