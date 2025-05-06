@@ -41,7 +41,7 @@ struct RpcBody
 
 - `magic` is used by the server to quickly filter out data packets that don't belong to this RPC protocol.
 - `need_return` indicates whether the server should return a function’s result.
-- `seqno` represents the position of this RPC is at in sequence. The request and response of a single call share the same `seqno`, which helps the client distribute return values to different RPC protocols.
+- `seqno` represents the position of this RPC is at in sequence. The request and response of a single call share the same `seqno`, which helps the client distribute response to different RPC protocols.
 - `body_length` the actual length in bytes of the body part.
 - `servicename` is the name of the service used by the server to identify the request type and dispatch it to the corresponding routine.
 - `parameters` contains the function parameters.
@@ -116,7 +116,7 @@ FYI, you can find the entries of these two program in source/apps/Server.cc and 
 
 This section demonstrates how to implement a hello service to introduce the framework's usage.
 
-To perform remote calls, you need an Rpc proxy class on the client side to invoke the RPC call, and you need a specific implementation on the server side to execute the task and return the function result as well.
+To perform remote calls, you need an RPC proxy class on the client side to invoke the RPC call, and you need a specific implementation on the server side to execute the task and return the function result as well.
 
 ### Writing your .proto file
 
@@ -125,17 +125,21 @@ The first thing you need to do is to define the arguments of your service, in Dr
 For our hello service, the only argument we need is a `string`, which is the username of client.
 
 ```proto
-message HelloArgs {
+message HelloReq {
   string username = 1;
+}
+
+message HelloRsp {
+  string greeting = 1;
 }
 ```
 
 By execute `cmake ..` command, `protoc` is automatically called before compile, which will generate reflection code according to this proto file.
 
-In reflection code, you can see a c++ struct named `HelloArgs` produced by protoc, located in `*.pb.h`.
+In reflection code, you can see c++ structs named `HelloReq` and `HelloRsp` produced by protoc, located in `*.pb.h`.
 
 ```cpp
-class HelloArgs : public ::google::protobuf::Message
+class HelloReq : public ::google::protobuf::Message
 {
     <collapsed>
 private:
@@ -145,7 +149,7 @@ private:
 
 ### Defining your Serivce Base Class
 
-Inherit `RpcServiceBase`, set the `ServiceName` to uniquely identify the RPC service, and add a function declaration for the RPC function with its parameters and return values.
+Inherit `RpcServiceBase`, set the `ServiceName` to uniquely identify the RPC service, and add a function declaration for the RPC function with its request and response.
 
 ```cpp
 class HelloServiceBase : public RpcServiceBase
@@ -156,7 +160,7 @@ public:
         ServiceName = "Hello";
     }
     virtual ~HelloServiceBase() = default;
-    virtual int Hello(HelloArgs args) = 0;
+    virtual HelloRsp Hello(HelloReq req) = 0;
 };
 ```
 
@@ -173,27 +177,35 @@ public:
     HelloServiceImpl() = default;
     virtual ~HelloServiceImpl() = default;
     virtual RpcResult Handle(const RpcMessage& Context) override;
-    virtual int Hello(HelloArgs args) override;
+    virtual HelloRsp Hello(HelloReq req) override;
 };
 
 RpcResult HelloServiceImpl::Handle(const RpcMessage& Context)
 {
-    HandleRPC<HelloArgs>(Context, &Hello);
+    HandleRPC(HelloReq, HelloRsp, Hello);
 }
 
-int HelloServiceImpl::Hello(HelloArgs args)
+HelloRsp HelloServiceImpl::Hello(HelloReq req)
 {
-    std::string log_msg = "Hello, " + args.username();
-    std::cout << log_msg << std::endl;
-    return 0;
+    std::string greeting = "Hello, " + req.username();
+    HelloRsp rsp;
+    rsp.set_greeting(greeting);
+    return rsp;
 }
 
 int main(int argc, char* argv[])
 {
-    RpcServer ServerStub({"127.0.0.1", 8888, "server.log"}); // Get an RPC Server object
-    HelloServiceImpl HelloImplementation; // Construct an Hello service implementation
-    ServerStub.RegisterService(&HelloImplementation); // Register Hello service
-    ServerStub.Main(argc, argv); // Run the RPC Server, waiting for and handling requests
+    // Create an RPC Server object
+    RpcServer ServerStub({"127.0.0.1", 8888, "server.log"});
+
+    // Construct an Hello service implementation
+    HelloServiceImpl HelloImplementation;
+
+    // Register Hello service
+    ServerStub.RegisterService(&HelloImplementation);
+
+    // Run the RPC Server, waiting for and handling requests
+    ServerStub.Main(argc, argv);
 }
 ```
 
@@ -203,7 +215,7 @@ int main(int argc, char* argv[])
 
 Inherit `HelloServiceBase` and implement the RPC proxy on the client side. You only need to add a macro inside the client-side proxy function.
 
-Start the RPC client, call the client method to get the service proxy object, and then you will see the server print "Hello, Alice".
+Start a RPC client, make a service proxy object, use it to call the remote method, and then you will see the client print "Hello, Alice".
 
 ```cpp
 class HelloServiceProxy : public HelloServiceBase
@@ -211,30 +223,38 @@ class HelloServiceProxy : public HelloServiceBase
 public:
     HelloServiceProxy() = default;
     virtual ~HelloServiceProxy() = default;
-    virtual int Hello(HelloArgs args) override;
+    virtual HelloRsp Hello(HelloReq req) override;
 };
 
-int HelloServiceProxy::Hello(HelloArgs args)
+HelloRsp HelloServiceProxy::Hello(HelloReq req)
 {
-    return CallRPC<int>(args);
+    return CallRPC<HelloRsp>(req);
 }
 
 int main(int argc, char* argv[])
 {
-    auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" }); // Get an RPC Client object
-    auto HelloPtr = ClientStub->GetProxy<HelloServiceProxy>(); // Get an RPC Proxy object
-    HelloArgs args;
-    args.set_username("Alice");
-    HelloPtr->Hello(args); // Call remote service
+    // Get an RPC Client object
+    auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" });
+    
+    // Get an RPC Proxy object
+    auto HelloPtr = ClientStub->GetProxy<HelloServiceProxy>();
+
+    // Call remote service
+    HelloReq req;
+    req.set_username("Alice");
+    HelloRsp rsp = HelloPtr->Hello(req);
+    
+    std::cout << rsp.greeting() << std::endl;
+
     return 0;
 }
 ```
 
 #### Using Callbacks
 
-In the above apps, the client calls a remote function and then wait for the response, that can block the main thread.
+In the above app, the client calls a remote function and then wait for the response, that blocks the main thread.
 
-If you want your RPC call to be more thread friendly, you are allowed to write a client program that receives and handles the return value asynchronously.
+If you want your RPC call to be more thread friendly, you are allowed to write a client program that receives and handles the response asynchronously.
 
 ```cpp
 class AsyncHelloServiceProxy : public HelloServiceBase
@@ -242,41 +262,49 @@ class AsyncHelloServiceProxy : public HelloServiceBase
 public:
     AsyncHelloServiceProxy() = default;
     virtual ~AsyncHelloServiceProxy() = default;
-    virtual int Hello(HelloArgs args) override;
+    virtual HelloRsp Hello(HelloReq req) override;
 private:
-    static void HelloCallback(int return_value);
+    static void HelloCallback(HelloRsp rsp);
 };
 
-int AsyncHelloServiceProxy::Hello(HelloArgs args)
+HelloRsp AsyncHelloServiceProxy::Hello(HelloReq req)
 {
-    CallRPCAsync(&AsyncHelloServiceProxy::HelloCallback, data);
-    return {};
+    CallRPCAsync(req, &AsyncHelloServiceProxy::HelloCallback);
+    return HelloRsp();
 }
 
 void AsyncHelloServiceProxy::HelloCallback(int return_value)
 {
-    std::cout << "Server returned " << return_value << std::endl;
+    std::cout << rsp.greeting() << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
-    auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" }); // Get an RPC Client object
-    auto HelloPtr = ClientStub->GetProxy<AsyncHelloServiceProxy>(); // Get an RPC Proxy object
-    HelloArgs args;
-    args.set_username("Alice");
-    HelloPtr->Hello(args); // Call remote service and wait for response
-    sleep(1); // Grace period
+    // Get an RPC Client object
+    auto&& ClientStub = RpcClient::GetRpcClient({ "127.0.0.1", 8888, "client.log" });
+    
+    // Get an RPC Proxy object
+    auto HelloPtr = ClientStub->GetProxy<AsyncHelloServiceProxy>();
+
+    // Call remote service
+    HelloReq req;
+    req.set_username("Alice");
+    HelloPtr->Hello(req);
+
+    // Grace period
+    sleep(1);
+    
     return 0;
 }
 ```
 
-In this apps, we added callback handling code to the proxy class to process the return value received from the server. Running the client will display "Server returned 0" on the client.
+In this app, we added callback handling code to the proxy class to process the greeting sent by the server. Running this client will print "Hello, Alice" on an asynchronous thread through a callback, instead of the main thread.
 
 ### Service Discovery
 
 In modern distributed system, we typically do not designate the address of RPC server on client side.
 
-In order to provide better scalability, DreamboatRPC give you a more flexible way to discover the destination node to serve your client - centralized service discovery!
+In order to provide better scalability, DreamboatRPC give you a more flexible way to discover the destination node to serve your client - centralized service discovery! Now you only need to know the address of name server and the name of the service you want to call. 
 
 ```cpp
 int main(int argc, char* argv[])
@@ -290,8 +318,6 @@ int main(int argc, char* argv[])
     // Use ClientStub to do your job
 }
 ```
-
-Running this client will print "Server says: hello world!" on the main thread, instead of the asynchronous thread through a callback.
 
 ## Layer Design
 
@@ -327,7 +353,7 @@ The Transport layer wraps Linux system calls for low-level socket communication,
 
 ### 5. **Client Layer**
 
-Send requests for remote procedure calls (RPC) to the server and waiting return values.
+Send requests for remote procedure calls (RPC) to the server and waiting response.
 
 ### 5. **Server Layer**
 
